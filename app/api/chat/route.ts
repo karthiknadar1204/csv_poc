@@ -1,4 +1,4 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { config } from '@/utils/config';
@@ -9,8 +9,8 @@ import { ChatMessage, ChatRequest, ChatResponse } from '@/utils/types';
 const MAX_RESPONSE_TOKENS = 2048;
 const MAX_HISTORY_MESSAGES = 10;
 
-const google = createGoogleGenerativeAI({
-  apiKey: config.googleAiKey
+const openai = createOpenAI({
+  apiKey: config.openaiKey
 });
 
 // Improved token estimation
@@ -131,14 +131,7 @@ Focus on:
 5. Suggesting relevant follow-up questions`;
 
     const { text } = await generateText({
-      model: google("gemini-2.0-flash-exp", {
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      }),
+      model: openai("gpt-4o"),
       prompt
     });
 
@@ -157,12 +150,9 @@ Focus on:
   } catch (error: unknown) {
     console.error("Error:", error);
     
-    if (error instanceof Error && 'lastError' in error && 
-        typeof error.lastError === 'object' && error.lastError && 
-        'statusCode' in error.lastError && 
-        error.lastError.statusCode === 429) {
+    if (error instanceof Error && error.message.includes('rate_limit')) {
       return NextResponse.json(
-        { error: "API quota exceeded. Please try again in a few minutes." } as ChatResponse,
+        { error: "API rate limit exceeded. Please try again in a few minutes." } as ChatResponse,
         { status: 429 }
       );
     }
